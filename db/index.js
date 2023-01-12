@@ -147,11 +147,11 @@ async function getPostsByUser(userId) {
 module.exports = {
     client,
     createUser,
-    createPost,
     getAllUsers,
-    getAllPosts,    
     updateUser,
+    getUserById,
+    createPost,
+    getAllPosts,    
     updatePost,
-    getPostsByUser,
-    getUserById
+    getPostsByUser
 }
