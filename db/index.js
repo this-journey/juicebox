@@ -79,7 +79,8 @@ async function getUserById(userId) {
 async function createPost({
     authorId,
     title,
-    content, 
+    content,
+    tags = [] 
 }) {
     try {
         const { rows: [ post ] } = await client.query(`
@@ -88,7 +89,9 @@ async function createPost({
         RETURNING *;
     `, [authorId, title, content]);
 
-        return post;
+        const tagList = await createTags(tags);
+
+        return await addTagsToPost(post.id, tagList);
     } catch (error) {
         throw error;
     }
@@ -111,7 +114,10 @@ async function getAllPosts() {
     }
 };
 
-async function updatePost(id, fields = {}) {
+async function updatePost(postId, fields = {}) {
+    const { tags } = fields;
+    delete fields.tags;
+
     const setString = Object.keys(fields).map(
       (key, index) => `"${ key }"=$${ index + 1 }`
     ).join(', ');
@@ -121,14 +127,34 @@ async function updatePost(id, fields = {}) {
     }
   
     try {
-      const { rows: [ post ] } = await client.query(`
-        UPDATE posts
-        SET ${ setString }
-        WHERE id=${ id }
-        RETURNING *;
-      `, Object.values(fields));
-  
-      return post;
+        if (setString.length > 0) {
+            await client.query(`
+                UPDATE posts
+                SET ${ setString }
+                WHERE id=${ postId }
+                RETURNING *;
+            `, Object.values(fields));
+        }
+
+        if (tags === undefined) {
+            return await getPostById(postId);
+        }
+
+        const tagList =  await createTags(tags);
+        const tagListIdString = tagList.map(
+            tag => `${ tag.id }`
+        ).join(', ');
+
+        await client.query(`
+            DELETE FROM post_tags
+            WHERE "tagId"
+            NOT IN (${ tagListIdString })
+            AND "postId"=$1;
+        `, [postId]);
+
+        await addTagsToPost(postId, tagList);
+
+        return await getPostById(postId);
     } catch (error) {
       throw error;
     }
@@ -180,6 +206,24 @@ async function getPostById(postId) {
         return post;
     } catch (error) {
         throw error;
+    }
+};
+
+async function getPostsByTagName(tagName) {
+    try {
+        const { rows: postIds } = await client.query(`
+            SELECT posts.id
+            FROM posts
+            JOIN post_tags ON posts.id=post_tags."postId"
+            JOIN tags ON tags.id=post_tags."tagId"
+            WHERE tags.name=$1;
+        `, [tagName]);
+    
+        return await Promise.all(postIds.map(
+            post => getPostById(post.id)
+        ));
+    } catch (error) {
+      throw error;
     }
 };
 
@@ -249,6 +293,7 @@ module.exports = {
     updatePost,
     getPostsByUser,
     getPostById,
+    getPostsByTagName,
     createTags,
     createPostTag,
     addTagsToPost
