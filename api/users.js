@@ -2,7 +2,7 @@ const express = require('express');
 const usersRouter = express.Router();
 const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = process.env;
-const { getAllUsers, getUserByUsername } = require('../db');
+const { getAllUsers, getUserByUsername, createUser } = require('../db');
 
 usersRouter.use((req, res, next) => {
     console.log("A request is being made to /users");
@@ -19,6 +19,7 @@ usersRouter.get('/', async (req, res) => {
 });
 
 usersRouter.post('/login', async (req, res, next) => {
+    console.log({body:req.body});
 const { username, password } = req.body;
 
     if (!username || !password) {
@@ -91,3 +92,5 @@ usersRouter.post('/register', async (req, res, next) => {
 });
 
 module.exports = usersRouter;
+
+//curl http://localhost:3000/api -H 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJhbGJlcnQiLCJpYXQiOjE2NzQ3MDU4Mzl9.6VZ84WD9xyR2G-NorVlNK2XGHnFbgdgxr4x-8kCwdZs'

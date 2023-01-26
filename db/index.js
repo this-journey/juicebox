@@ -79,13 +79,14 @@ async function getUserById(userId) {
 };
 
 async function getUserByUsername(username) {
+    console.log({username});
     try {
         const { rows: [user] } = await client.query(`
             SELECT *
             FROM users
             WHERE username=$1;
-        ` [username]);
-
+        `, [username]);
+        console.log({user});
         return user;
     } catch (error) {
         throw error;
